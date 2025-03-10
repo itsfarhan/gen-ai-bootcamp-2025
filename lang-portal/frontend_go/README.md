@@ -1,191 +1,105 @@
+# Language Learning Portal - Frontend
 
+This directory contains the frontend application for the Language Learning Portal. The frontend is built using HTMX and connects to the Go backend API.
 
+## Getting Started
 
-# **Frontend UI: Building with Bolt.ai**  
+### Prerequisites
 
-## **Objective**  
-The goal was to develop a **frontend user interface (UI)** for the **Language Portal App**, ensuring:  
-✅ The UI adheres to **frontend specifications** (`frontend-tech-spec.md`).  
-✅ The UI **aligns with the backend API** (`backend-tech-spec.md`).  
-✅ The **development process is efficient and scalable**.  
+- Go 1.16 or higher
+- Access to the backend API (running on a specified port)
 
----
+### Starting the Server
 
-## **Approach**  
-
-1️⃣ **Using Bolt.ai for Assisted Development**  
-   - **Bolt.ai** was used to **generate UI components and manage state**.  
-   - The assistant referenced both **frontend and backend tech specs** to maintain consistency.  
-
-2️⃣ **Ensuring Backend Compatibility**  
-   - API calls, data structures, and UI components were adjusted to **match backend responses**.  
-   - Mock APIs (`src/lib/api.ts`) were tested and aligned with **backend API responses**.  
-
----
-
-## **Task Execution**  
-
-### **Step 1: Initial Frontend Setup**  
-- **Prompt Used in Bolt.ai:**  
-  ```  
-  I need to build a frontend UI for my language portal app.  
-  Reference the frontend specifications in the 'frontend-tech-spec.md' file.  
-  Ensure API interactions align with the backend specifications in 'backend-tech-spec.md'.  
-  Use a modern UI framework with responsiveness and accessibility in mind.  
-  ```  
-- **Response from Bolt.ai:**  
-  ```  
-  I'll generate a frontend UI based on the provided tech specs.  
-  I'll ensure compatibility with backend endpoints and best practices for UI/UX.  
-  ```  
-
----
-
-## **Project Structure**  
-Bolt.ai generated the following **directory structure**:  
-
-```plaintext
-frontend/
-├── src/
-│   ├── components/        # Reusable UI components
-│   ├── hooks/             # Custom React hooks
-│   ├── lib/               # API service functions
-│   ├── pages/             # Main UI pages
-│   ├── App.tsx            # Root component
-│   ├── index.css          # Global styles
-│   ├── main.tsx           # React entry point
-│   ├── vite-env.d.ts      # TypeScript environment definitions
-├── .gitignore             # Git ignore rules
-├── components.json        # Component tracking
-├── eslint.config.js       # Linting rules
-├── index.html             # Root HTML file
-├── package.json           # Project dependencies
-├── package-lock.json      # Lock file for dependencies
-├── postcss.config.js      # PostCSS configuration
-├── tailwind.config.js     # Tailwind CSS configuration
-├── tsconfig.app.json      # TypeScript config for app
-├── tsconfig.json          # General TypeScript config
-├── tsconfig.node.json     # TypeScript config for Node.js
-└── vite.config.ts         # Vite configuration
+1. Navigate to the frontend_go directory:
+```bash
+cd path/to/frontend_go
 ```
 
-**Observations:**  
-- The **structure follows best practices**, making it easy to scale and maintain.  
-- **TypeScript is used**, ensuring strong type safety.  
-- **Vite is used** for fast frontend development.  
-- **Tailwind CSS** provides modern styling.  
-
----
-
-## **Step 2: UI Components and Pages Implementation**  
-
-### **✅ Dashboard Page (`/dashboard`)**  
-#### **Features:**  
-- Displays **study progress, session history, and key stats**.  
-- Data is fetched from `GET /api/dashboard/study_progress`.  
-- Uses **React Context API** for global state management.  
-
-```tsx
-useEffect(() => {
-  axios.get('/api/dashboard/study_progress')
-    .then(res => setStudyProgress(res.data))
-    .catch(err => console.error("Error loading data", err));
-}, []);
+2. Run the Go server:
+```bash
+go run main.go
 ```
 
----
+This will start the frontend server on port 8080 by default. You can access the web interface by opening a browser and navigating to `http://localhost:8080`.
 
-### **✅ Study Activities Page (`/study-activities`)**  
-#### **Features:**  
-- Lists all **available study activities**.  
-- Fetches data from `GET /api/study_activities`.  
-- Uses **PaginationWithInfo** for improved navigation.  
+## Application Pages and Features
 
-```tsx
-useEffect(() => {
-  axios.get('/api/study_activities')
-    .then(res => setActivities(res.data.activities))
-    .catch(err => console.error("Error loading activities", err));
-}, []);
-```
+### Dashboard
 
----
+The dashboard provides a quick overview of your language learning progress, including:
+- Recent activity summary
+- Statistics on words learned
+- Upcoming study reminders
+- Quick links to start new study sessions
 
-## **Step 3: UI Testing & Debugging**  
-To confirm **frontend functionality and navigation**, the following **UI tests were conducted**:  
+### Words
 
-✅ **Click Testing:**  
-   - Each page was manually clicked to ensure **navigation worked correctly**.  
-   - Verified that **routes loaded properly** without errors.  
-   - Ensured the **page components rendered expected UI elements**.  
+The Words page allows you to manage your vocabulary:
+- View all words in a paginated table
+- Add new words with translations, examples, and notes
+- Edit existing words
+- Delete words
+- Search and filter your word collection
 
-✅ **Visual Verification:**  
-   - Checked that **page layouts, buttons, and text were properly displayed**.  
-   - Ensured **responsive behavior on different screen sizes**.  
-   - Confirmed **consistent UI across navigation flows**.  
+### Groups
 
-✅ **Basic Interaction Tests:**  
-   - Clicked on **buttons and links** to validate expected interactions.  
-   - Verified that **forms and inputs displayed correctly**.  
-   - Ensured **no console errors appeared during page rendering**.
+The Groups page helps you organize words into meaningful collections:
+- Create new word groups with names and descriptions
+- Add words to groups
+- Remove words from groups
+- View all words within a specific group
+- Edit or delete groups
 
-✅ **All API calls successfully returned expected JSON responses.**  
+### Study Sessions
 
----
+The Study Sessions page enables active learning:
+- Start new study sessions with selected word groups
+- Choose different study activities
+- Track your progress during sessions
+- View history of past sessions with performance statistics
 
-## **Step 4: Compatibility Fixes**  
-### **⚠ Issues Identified & Fixed**  
+### Activities
 
-1️⃣ **Mock API Response Structure (`src/lib/api.ts`)**  
-   - Updated to **match backend API exactly**.  
-   - Added **proper error handling** and **pagination support**.  
+The Activities page allows you to configure different learning exercises:
+- Multiple choice quizzes
+- Flashcards
+- Writing practice
+- Customize settings for each activity type
 
-2️⃣ **Component Updates for API Compatibility**  
-   - **Updated state management** in `dashboard`, `quick-stats`, and `word-list`.  
-   - **Fixed incorrect response mappings** in `study-activities/index.tsx`.  
-   - **Handled pagination properly** for `groups` and `study-sessions`.  
+### Settings
 
-3️⃣ **Added Reusable UI Components for Error & Loading States**  
-   - `src/components/ui/error-message.tsx`  
-   - `src/components/ui/loading-skeleton.tsx`  
-   - `src/components/ui/pagination-with-info.tsx`  
+The Settings page allows you to personalize your learning experience:
+- Set default session duration
+- Configure timer settings
+- Adjust notification preferences
+- Customize display options
 
-✅ **These fixes resolved API compatibility and UI responsiveness issues.**  
+## Connecting to the Backend API
 
----
+The frontend application uses HTMX to communicate with the backend API. All API calls are made to endpoints on the backend server. By default, the frontend expects the backend to be available at `http://localhost:3000/api`.
 
-## **Observations & Suggestions**  
+To configure a different backend API URL, you can modify the `apiBaseUrl` variable in the main.go file.
 
-### **✅ What Worked Well**  
-✔ **Bolt.ai performed exceptionally well**, generating a near-complete frontend.  
-✔ **UI structure aligned closely with backend API** after minor fixes.  
-✔ **Minimal post-generation debugging required**.  
+### API Endpoints Used
 
----
+- `/api/words` - For word management (GET, POST, PUT, DELETE)
+- `/api/groups` - For group management (GET, POST, PUT, DELETE)
+- `/api/sessions` - For study session management
+- `/api/activities` - For activity configuration
+- `/api/dashboard` - For dashboard statistics and information
+- `/api/settings` - For user settings
 
-## **🚀 Suggested Improvements (Frontend Only)**  
+## Development
 
-### **📌 Accessibility Enhancements**  
-🔧 **Add ARIA labels** for better screen reader support.  
-🔧 **Ensure keyboard navigation** works smoothly.  
-🔧 **Improve color contrast** for readability.  
+To modify the frontend:
+1. Edit the HTML files in the frontend_go directory
+2. Add or modify static assets in the assets directory
+3. Restart the server to see your changes
 
-### **📌 Error Handling & User Feedback**  
-🔧 **Implement better error state designs**.  
-🔧 **Add retry mechanisms for failed API calls**.  
+## Troubleshooting
 
-### **📌 Code Organization & Maintainability**  
-🔧 **Add more inline documentation** for complex components.  
-🔧 **Create a style guide** for consistent UI patterns.  
+- If you encounter CORS issues, ensure your backend API is configured to allow requests from the frontend origin.
+- If the frontend cannot connect to the backend, check that the backend server is running and accessible.
+- For template loading errors, verify that all HTML files are in the correct location.
 
-### **📌 Developer Experience**  
-🔧 **Improve component examples and stories** for easier development.  
-
----
-
-## **Conclusion**  
-- **Bolt.ai successfully generated a fully functional, responsive frontend.**  
-- **Minimal compatibility fixes were needed**, mainly around API response structures.  
-- **Next steps involve UX enhancements, accessibility improvements, and minor refinements.**  
-
-🚀 **Frontend development completed successfully!** 🚀  
