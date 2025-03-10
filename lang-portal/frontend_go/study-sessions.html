@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Sessions - Language Learning Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+    <style>
+        .session-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .timer-display {
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .word-card {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #f9f9f9;
+        }
+        .progress-bar {
+            height: 10px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .result-icon {
+            font-size: 1.5rem;
+            margin-right: 10px;
+        }
+        .correct {
+            color: #28a745;
+        }
+        .incorrect {
+            color: #dc3545;
+        }
+        .stats-container {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">Study Sessions</h1>
+        
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs mb-4" id="sessionTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="past-sessions-tab" data-bs-toggle="tab" data-bs-target="#past-sessions" 
+                        type="button" role="tab" aria-controls="past-sessions" aria-selected="true"
+                        hx-get="/api/sessions" 
+                        hx-trigger="click once"
+                        hx-target="#past-sessions-content"
+                        hx-indicator=".spinner">
+                    Past Sessions
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="new-session-tab" data-bs-toggle="tab" data-bs-target="#new-session" 
+                        type="button" role="tab" aria-controls="new-session" aria-selected="false"
+                        hx-get="/api/groups"
+                        hx-trigger="click once"
+                        hx-target="#group-select">
+                    Start New Session
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="active-session-tab" data-bs-toggle="tab" data-bs-target="#active-session" 
+                        type="button" role="tab" aria-controls="active-session" aria-selected="false">
+                    Active Session
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="session-stats-tab" data-bs-toggle="tab" data-bs-target="#session-stats" 
+                        type="button" role="tab" aria-controls="session-stats" aria-selected="false">
+                    Statistics
+                </button>
+            </li>
+        </ul>
+        
+        <!-- Loading Spinner -->
+        <div class="spinner d-none">
+            <div class="d-flex justify-content-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tab Content -->
+        <div class="tab-content" id="sessionTabsContent">
+            <!-- Past Sessions Tab -->
+            <div class="tab-pane fade show active" id="past-sessions" role="tabpanel" aria-labelledby="past-sessions-tab">
+                <div id="past-sessions-content">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="text-center p-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Loading past sessions...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- New Session Tab -->
+            <div class="tab-pane fade" id="new-session" role="tabpanel" aria-labelledby="new-session-tab">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Start a New Study Session</h5>
+                        <form id="new-session-form" hx-post="/api/sessions" hx-ext="json-enc" hx-target="#active-session-content" hx-swap="innerHTML" hx-on::after-request="sessionStarted()">
+                            <div class="mb-3">
+                                <label for="group-select" class="form-label">Select Word Group</label>
+                                <select class="form-select" id="group-select" name="group_id" required>
+                                    <option value="" selected disabled>Loading groups...</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="activity-select" class="form-label">Activity Type</label>
+                                <select class="form-select" id="activity-select" name="activity_type" required 
+                                        hx-get="/api/activities" 
+                                        hx-trigger="load once" 
+                                        hx-target="this">
+                                    <option value="" selected disabled>Loading activities...</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="session-duration" class="form-label">Session Duration (minutes)</label>
+                                <input type="number" class="form-control" id="session-duration" name="duration" min="1" max="120" value="15">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="word-limit" class="form-label">Word Limit (0 for no limit)</label>
+                                <input type="number" class="form-control" id="word-limit" name="word_limit" min="0" value="0">
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary" id="start-session-btn">
+                                Start Session
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Active Session Tab -->
+            <div class="tab-pane fade" id="active-session" role="tabpanel" aria-labelledby="active-session-tab">
+                <div id="active-session-content">
+                    <div class="card">
+                        <div class="card-body text-center p-5">
+                            <h5 class="card-title mb-4">No Active Session</h5>
+                            <p class="card-text">You don't have an active study session at the moment.</p>
+                            <button class="btn btn-primary" data-bs-toggle="tab" data-bs-target="#new-session">
+                                Start a New Session
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Session Statistics Tab -->
+            <div class="tab-pane fade" id="session-stats" role="tabpanel" aria-labelledby="session-stats-tab">
+                <div id="session-stats-content">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Session Statistics</h5>
+                            <div class="form-group mb-3">
+                                <label for="session-select" class="form-label">Select Session</label>
+                                <select class="form-select" id="session-select" 
+                                        hx-get="/api/sessions" 
+                                        hx-trigger="load once" 
+                                        hx-target="this"
+                                        hx-on:change="loadSessionStats(this.value)">
+                                    <option value="" selected disabled>Select a session</option>
+                                </select>
+                            </div>
+                            
+                            <div id="stats-display" class="stats-container hidden">
+                                <h6 class="mb-3">Summary</h6>
+                                <div class="stat-item">
+                                    <span>Session Date:</span>
+                                    <span id="stat-date"></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span>Duration:</span>
+                                    <span id="stat-duration"></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span>Words Reviewed:</span>
+                                    <span id="stat-words-reviewed"></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span>Correct Answers:</span>
+                                    <span id="stat-correct"></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span>Accuracy:</span>
+                                    <span id="stat-accuracy"></span>
+                                </div>
+                                
+                                <h6 class="mt-4 mb-3">Performance Details</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Word</th>
+                                                <th>Answer</th>
+                                                <th>Correct</th>
+                                                <th>Time Taken</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="stat-details">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Templates for HTMX Responses -->
+    
+    <!-- Active Session Template -->
+    <template id="active-session-template">
+        <div class="session-card">
+            <h4 class="session-title mb-3">Active Session: <span id="session-group-name">{group_name}</span></h4>
+            <div class="timer-display" id="session-timer">00:00:00</div>
+            
+            <div class="d-flex justify-content-between mb-4">
+                <div>
+                    <strong>Activity:</strong> <span id="activity-type">{activity_type}</span>
+                </div>
+                <div>
+                    <strong>Progress:</strong> <span id="progress-counter">0</span>/<span id="total-words">{total_words}</span>
+                </div>
+            </div>
+            
+            <div class="progress">
+                <div class="progress-bar" id="session-progress" role="progressbar" style="width: 0%"></div>
+            </div>
+            
+            <div id="current-word-container" class="word-card my-4">
+                <div class="mb-3">
+                    <h5 id="word-prompt"></h5>
+                    <p id="word-example" class="fst-italic text-muted"></p>
+                </div>
+                
+                <div id="answer-input-container" class="mb-3">
+                    <input type="text" class="form-control" id="answer-input" placeholder="Type your answer...">
+                </div>
+                
+                <div id="answer-result" class="mb-3 hidden">
+                    <div id="correct-answer" class="alert alert-success hidden">
+                        <i class="bi bi-check-circle result-icon correct"></i> Correct!
+                    </div>
+                    <div id="incorrect-answer" class="alert alert-danger hidden">
+                        <i class="bi bi-x-circle result-icon incorrect"></i> 
+                        Incorrect. The correct answer is: <strong id="correct-answer-text"></strong>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <button class="btn btn-secondary" id="skip-btn"
+                            hx-post="/api/sessions/current/skip"
+                            hx-trigger="click"
+                            hx-target="#current-word-container"
+                            hx-swap="innerHTML">
+                        Skip
+                    </button>
+                    <button class="btn btn-primary" id="check-answer-btn"
+                            hx-post="/api/sessions/current/check"
+                            hx-include="[id='answer-input']"
+                            hx-trigger="click"
+                            hx-target="#answer-result"
+                            hx-swap="innerHTML">
+                        Check Answer
+                    </button>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between mt-4">
+                <button class="btn btn-warning" id="pause-resume-btn"
+                        hx-post="/api/sessions/current/toggle-pause"
+                        hx-trigger="click"
+                        hx-swap="none">
+                    Pause Session
+                </button>
+                <button class="btn btn-danger" id="end-session-btn"
+                        hx-post="/api/sessions/current/end"
+                        hx-trigger="click"
+                        hx-target="#session-stats-content"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="sessionEnded()">
+                    End Session
+                </button>
+            </div>
+        </div>
+    </template>
+    
+    <!-- Session Stats Template -->
+    <template id="session-stats-template">
+        <div class="stats-container">
+            <h4>Session Summary: {session_date}</h4>
+            
+            <div class="row mt-4">
+                <div class="col-m
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Sessions - Language Learning Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.9.0"></script>
+    <script src="https://unpkg.com/hyperscript.org@0.9.9"></script>
+    <style>
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .btn-primary {
+            background-color: #4a6baf;
+            border-color: #4a6baf;
+        }
+        .btn-primary:hover {
+            background-color: #3a559a;
+            border-color: #3a559a;
+        }
+        .btn-success {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        .btn-success:hover {
+            background-color: #218838;
+            border-color: #218838;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        .btn-danger:hover {
+            background-color: #c82333;
+            border-color: #c82333;
+        }
+        .active-session {
+            border-left: 5px solid #28a745;
+            padding-left: 15px;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #4a6baf;
+            box-shadow: 0 0 0 0.25rem rgba(74, 107, 175, 0.25);
+        }
+        .word-card {
+            position: relative;
+            height: 200px;
+            perspective: 1000px;
+            margin-bottom: 20px;
+        }
+        .word-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .word-card.flipped .word-card-inner {
+            transform: rotateY(180deg);
+        }
+        .word-card-front, .word-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .word-card-front {
+            background-color: #f8f9fa;
+        }
+        .word-card-back {
+            background-color: #e9ecef;
+            transform: rotateY(180deg);
+        }
+        .word-text {
+            font-size: 1.5rem;
+            font-weight: 500;
+            padding: 20px;
+        }
+        .progress {
+            height: 10px;
+            margin-bottom: 20px;
+        }
+        #session-stats {
+            font-size: 14px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">Study Sessions</h1>
+
+        <!-- Active Session Section (conditionally displayed) -->
+        <div id="active-session-container">
+            <div class="card mb-4 active-session" id="active-session-placeholder">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Active Session</h5>
+                    <span id="session-timer" class="badge bg-primary">00:00:00</span>
+                </div>
+                <div class="card-body">
+                    <div id="active-session-content"
+                         hx-get="/api/study-sessions/active"
+                         hx-trigger="load, sessionUpdated from:body"
+                         hx-swap="outerHTML">
+                        <div class="text-center p-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Checking for active sessions...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Start New Session Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Start New Study Session</h5>
+            </div>
+            <div class="card-body">
+                <form id="new-session-form" hx-post="/api/study-sessions" hx-swap="none" hx-on::after-request="this.reset(); document.body.dispatchEvent(new CustomEvent('sessionUpdated'));">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="group_id" class="form-label">Word Group</label>
+                            <select class="form-select" id="group_id" name="group_id" required
+                                    hx-get="/api/groups" 
+                                    hx-trigger="load" 
+                                    hx-target="#group_id" 
+                                    hx-swap="innerHTML">
+                                <option value="" selected disabled>Loading groups...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="activity_type" class="form-label">Activity Type</label>
+                            <select class="form-select" id="activity_type" name="activity_type" required
+                                    hx-get="/api/study-activities" 
+                                    hx-trigger="load" 
+                                    hx-target="#activity_type" 
+                                    hx-swap="innerHTML">
+                                <option value="" selected disabled>Loading activity types...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Start Session</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Past Sessions Table -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Past Sessions</h5>
+                <div class="d-flex">
+                    <input type="text" class="form-control form-control-sm me-2" 
+                           placeholder="Search..." 
+                           hx-post="/api/study-sessions/search"
+                           hx-trigger="keyup changed delay:500ms, search"
+                           hx-target="#sessions-table-body">
+                    <select class="form-select form-select-sm" style="width: 150px;"
+                            hx-get="/api/study-sessions"
+                            hx-trigger="change"
+                            hx-target="#sessions-table-body"
+                            hx-include="[name='limit']">
+                        <option value="10">Last 10</option>
+                        <option value="25">Last 25</option>
+                        <option value="50">Last 50</option>
+                        <option value="100">Last 100</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Start Time</th>
+                                <th scope="col">End Time</th>
+                                <th scope="col">Activity Type</th>
+                                <th scope="col">Words Reviewed</th>
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sessions-table-body" 
+                               hx-get="/api/study-sessions" 
+                               hx-trigger="load, sessionUpdated from:body" 
+                               hx-swap="innerHTML">
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <span class="ms-2">Loading sessions...</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates for HTMX responses -->
+
+    <!-- Template for active session -->
+    <template id="active-session-template">
+        <div id="active-session-content" class="active-session-details">
+            <div class="session-info mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <h6 class="mb-0">Group: <span class="group-name">{{group_name}}</span></h6>
+                        <small class="text-muted">Activity: <span class="activity-type">{{activity_type}}</span></small>
+                    </div>
+                    <div id="session-stats">
+                        <span class="words-reviewed">{{words_reviewed}}</span> / <span class="total-words">{{total_words}}</span> words reviewed
+                    </div>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: {{progress_percentage}}%"></div>
+                </div>
+            </div>
+
+            <div class="word-review-area mb-4">
+                <div class="word-card" _="on click toggle .flipped on me">
+                    <div class="word-card-inner">
+                        <div class="word-card-front">
+                            <div class="word-text original-word">{{current_word.original}}</div>
+                        </div>
+                        <div class="word-card-back">
+                            <div class="word-text translation">{{current_word.translation}}</div>
+                        </div>
+                    </div>
+                </div>
+                <p class="example-text text-muted fst-italic text-center">{{current_word.example}}</p>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <div>
+                    <button class="btn btn-outline-primary me-2"
+                            hx-post="/api/study-sessions/active/word/skip"
+                            hx-swap="none"
+                            hx-on::after-request="document.body.dispatchEvent(new CustomEvent('sessionUpdated'))">
+                        Skip
+                    </button>
+                    <button class="btn btn-outline-danger"
+                            hx-post="/api/study-sessions/active/word/incorrect"
+                            hx-swap="none"
+                            hx-on::after-request="document.body.dispatchEvent(new CustomEvent('sessionUpdated'))">
+                        Incorrect
+                    </button>
+                </div>
+                <div>
+                    <button class="btn btn-success"
+                            hx-post="/api/study-sessions/active/word/correct"
+                            hx-swap="none"
+                            hx-on::after-request="document.body.dispatchEvent(new CustomEvent('sessionUpdated'))">
+                        Correct
+                    </button>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end mt-4">
+                <button class="btn btn-danger"
+                        hx-post="/api/study-sessions/active/end"
+                        hx-swap="none"
+                        hx-confirm="Are you sure you want to end this session?"
+                        hx-on::after-request="document.body.dispatchEvent(new CustomEvent('sessionUpdated'))">
+                    End Session
+                </button>
+            </div>
+        </div>
+    </template>
+
+    <!-- Template for no active session -->
+    <template id="no-active-session-template">
+        <div id="active-session-content" class="p-4 text-center">
+            <p class="mb-3">No active study session.</p>
+            <p>Start a new session using the form below.</p>
+        </div>
+    </template>
+
+    <!-- Template for session table rows -->
+    <template id="session-row-template">
+        <tr>
+            <td>{{id}}</td>
+            <td>{{start_time}}</td>
+            <td>{{end_time}}</td>
+            <td>{{activity_type}}</td>
+            <td>{{words_reviewed}}</td>
+            <td>
+                <button class="btn btn-sm btn-primary"
+                        hx-get="/api/study-sessions/{{id}}/stats"
+                        hx-target="#sessionStatsModal .modal-body"
+                        data-bs-toggle="modal" 
+                        data-bs-target="#sessionStatsModal">
+                    View Stats
+                </button>
+            </td>
+        </tr>
+    </template>
+
+    <!-- Session Stats Modal -->
+    <div class="modal fade" id="sessionStatsModal" tabindex="-1" aria-labelledby="sessionStatsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="sessionStatsModalLabel">Session Statistics</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Loading session statistics...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Session timer functionality
+        document.addEventListener('D
+

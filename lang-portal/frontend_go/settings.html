@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Language Learning Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.9.3"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 20px;
+        }
+        .settings-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 800px;
+            margin: 20px auto;
+        }
+        .settings-title {
+            margin-bottom: 25px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .settings-section {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .settings-section:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4 rounded shadow-sm">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="index.html">Language Learning Portal</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a class="nav-link" href="index.html">Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="words.html">Words</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="groups.html">Groups</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="study-sessions.html">Study Sessions</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="activities.html">Activities</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="settings.html">Settings</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Settings Form -->
+        <div class="settings-container">
+            <h2 class="settings-title">User Preferences</h2>
+            
+            <form id="settingsForm" hx-post="/api/settings" hx-ext="json-enc" hx-trigger="submit" hx-target="#formResponse" hx-swap="outerHTML">
+                <!-- Study Session Settings -->
+                <div class="settings-section">
+                    <h4>Study Session Settings</h4>
+                    
+                    <div class="form-group">
+                        <label for="defaultSessionDuration" class="form-label">Default Session Duration (minutes)</label>
+                        <input type="number" class="form-control" id="defaultSessionDuration" name="defaultSessionDuration" min="1" max="120" value="15">
+                        <div class="form-text">How long should study sessions last by default?</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="wordsPerSession" class="form-label">Words Per Session</label>
+                        <input type="number" class="form-control" id="wordsPerSession" name="wordsPerSession" min="5" max="100" value="20">
+                        <div class="form-text">Maximum number of words to include in each study session</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="studyMode" class="form-label">Default Study Mode</label>
+                        <select class="form-select" id="studyMode" name="studyMode">
+                            <option value="flashcards">Flashcards</option>
+                            <option value="quiz">Quiz</option>
+                            <option value="typing">Typing Practice</option>
+                            <option value="mixed">Mixed Mode</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Display Settings -->
+                <div class="settings-section">
+                    <h4>Display Settings</h4>
+                    
+                    <div class="form-group">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="timerVisibility" name="timerVisibility" checked>
+                            <label class="form-check-label" for="timerVisibility">Show Timer During Sessions</label>
+                        </div>
+                        <div class="form-text">Display countdown timer during study sessions</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="showProgress" name="showProgress" checked>
+                            <label class="form-check-label" for="showProgress">Show Progress Indicators</label>
+                        </div>
+                        <div class="form-text">Display progress bar and statistics during sessions</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="theme" class="form-label">Application Theme</label>
+                        <select class="form-select" id="theme" name="theme">
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                            <option value="system">System Default</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Automation Settings -->
+                <div class="settings-section">
+                    <h4>Automation Settings</h4>
+                    
+                    <div class="form-group">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="autoAdvance" name="autoAdvance" checked>
+                            <label class="form-check-label" for="autoAdvance">Auto-advance Cards</label>
+                        </div>
+                        <div class="form-text">Automatically advance to next card after revealing answer</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="autoAdvanceDelay" class="form-label">Auto-advance Delay (seconds)</label>
+                        <input type="number" class="form-control" id="autoAdvanceDelay" name="autoAdvanceDelay" min="1" max="15" value="3">
+                        <div class="form-text">How long to wait before advancing to the next card</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="autoSaveProgress" name="autoSaveProgress" checked>
+                            <label class="form-check-label" for="autoSaveProgress">Auto-save Session Progress</label>
+                        </div>
+                        <div class="form-text">Automatically save session progress at regular intervals</div>
+                    </div>
+                </div>
+                
+                <!-- Notification Settings -->
+                <div class="settings-section">
+                    <h4>Notification Settings</h4>
+                    
+                    <div class="form-group">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="enableReminders" name="enableReminders">
+                            <label class="form-check-label" for="enableReminders">Enable Study Reminders</label>
+                        </div>
+                        <div class="form-text">Receive reminders to continue your language learning</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="reminderFrequency" class="form-label">Reminder Frequency</label>
+                        <select class="form-select" id="reminderFrequency" name="reminderFrequency">
+                            <option value="daily">Daily</option>
+                            <option value="weekdays">Weekdays Only</option>
+                            <option value="weekly">Weekly</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="button" class="btn btn-secondary me-md-2" hx-get="/api/settings/reset" hx-target="#settingsForm" hx-swap="outerHTML">
+                        Reset to Defaults
+                    </button>
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                </div>
+                
+                <div id="formResponse" class="mt-3"></div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Toast for notifications -->
+    <div class="toast-container">
+        <div id="settingsToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto">Language Learning Portal</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="toastMessage">
+                Settings saved successfully!
+            </div>
+        </div>
+    </div>
+    
+    <!-- Load settings on page load -->
+    <div hx-get="/api/settings" hx-trigger="load" hx-target="#settingsForm" hx-swap="none"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.body.addEventListener('htmx:afterRequest', function(event) {
+            if (event.detail.xhr.status === 200 && event.detail.requestConfig.path === '/api/settings') {
+                const toast = new bootstrap.Toast(document.getElementById('settingsToast'));
+                document.getElementById('toastMessage').textContent = 'Settings saved successfully!';
+                toast.show();
+            }
+        });
+    </script>
+</body>
+</html>
+

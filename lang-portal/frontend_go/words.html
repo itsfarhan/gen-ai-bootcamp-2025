@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Words Management - Language Learning Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+    <style>
+        .word-form {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .edit-form {
+            display: none;
+            background-color: #f0f7ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .table-responsive {
+            margin-top: 20px;
+        }
+        .btn-action {
+            margin-right: 5px;
+        }
+        .alert {
+            margin-top: 15px;
+        }
+        .spinner-border {
+            display: none;
+        }
+        htmx-indicator {
+            display: none;
+        }
+        htmx-indicator.active {
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container my-4">
+        <h1 class="mb-4">Words Management</h1>
+        
+        <!-- Alerts for user feedback -->
+        <div id="alert-container"></div>
+        
+        <!-- Add Word Form -->
+        <div class="word-form">
+            <h3>Add New Word</h3>
+            <form id="add-word-form" hx-post="/api/words" 
+                  hx-ext="json-enc"
+                  hx-trigger="submit"
+                  hx-target="#words-table-body" 
+                  hx-swap="beforeend"
+                  hx-indicator="#add-spinner"
+                  hx-on::after-request="this.reset(); showAlert('Word added successfully!', 'success');"
+                  hx-on::error="showAlert('Error adding word: ' + event.detail.xhr.responseText, 'danger');">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="originalWord" class="form-label">Original Word</label>
+                        <input type="text" class="form-control" id="originalWord" name="original_word" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="translation" class="form-label">Translation</label>
+                        <input type="text" class="form-control" id="translation" name="translation" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="example" class="form-label">Example</label>
+                    <textarea class="form-control" id="example" name="example" rows="2"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="notes" class="form-label">Notes</label>
+                    <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <span id="add-spinner" class="spinner-border spinner-border-sm htmx-indicator" role="status" aria-hidden="true"></span>
+                    Add Word
+                </button>
+            </form>
+        </div>
+        
+        <!-- Words Table -->
+        <div class="table-responsive">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>Word List</h3>
+                <div>
+                    <button class="btn btn-outline-secondary btn-sm" 
+                            hx-get="/api/words" 
+                            hx-target="#words-table-body" 
+                            hx-swap="innerHTML"
+                            hx-indicator="#refresh-spinner">
+                        <span id="refresh-spinner" class="spinner-border spinner-border-sm htmx-indicator" role="status" aria-hidden="true"></span>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+            
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Original Word</th>
+                        <th>Translation</th>
+                        <th>Example</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="words-table-body" hx-get="/api/words" hx-trigger="load" hx-indicator="#table-spinner">
+                    <!-- Words will be loaded here via HTMX -->
+                    <tr>
+                        <td colspan="6" class="text-center">
+                            <span id="table-spinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            Loading words...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Edit Word Form Template (Hidden initially) -->
+        <template id="edit-form-template">
+            <tr class="edit-form-row">
+                <td colspan="6">
+                    <div class="edit-form">
+                        <h4>Edit Word</h4>
+                        <form hx-put="/api/words/{id}" 
+                              hx-ext="json-enc"
+                              hx-target="closest tr" 
+                              hx-swap="outerHTML"
+                              hx-indicator="#edit-spinner-{id}"
+                              hx-on::after-request="showAlert('Word updated successfully!', 'success');"
+                              hx-on::error="showAlert('Error updating word: ' + event.detail.xhr.responseText, 'danger');">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit-originalWord-{id}" class="form-label">Original Word</label>
+                                    <input type="text" class="form-control" id="edit-originalWord-{id}" name="original_word" value="{original_word}" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit-translation-{id}" class="form-label">Translation</label>
+                                    <input type="text" class="form-control" id="edit-translation-{id}" name="translation" value="{translation}" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit-example-{id}" class="form-label">Example</label>
+                                <textarea class="form-control" id="edit-example-{id}" name="example" rows="2">{example}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit-notes-{id}" class="form-label">Notes</label>
+                                <textarea class="form-control" id="edit-notes-{id}" name="notes" rows="2">{notes}</textarea>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <button type="submit" class="btn btn-success">
+                                        <span id="edit-spinner-{id}" class="spinner-border spinner-border-sm htmx-indicator" role="status" aria-hidden="true"></span>
+                                        Save Changes
+                                    </button>
+                                    <button type="button" class="btn btn-secondary ms-2" onclick="cancelEdit(this)">Cancel</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+        </template>
+    </div>
+
+    <script>
+        // Function to handle the response from the words API and render the table
+        document.addEventListener('htmx:afterOnLoad', function(event) {
+            if (event.detail.target.id === 'words-table-body' && event.detail.xhr.status === 200) {
+                try {
+                    // Parse the response data
+                    const data = JSON.parse(event.detail.xhr.responseText);
+                    
+                    // Clear existing content
+                    event.detail.target.innerHTML = '';
+                    
+                    // If no words, show a message
+                    if (data.length === 0) {
+                        event.detail.target.innerHTML = '<tr><td colspan="6" class="text-center">No words found. Add your first word using the form above.</td></tr>';
+                        return;
+                    }
+                    
+                    // Render each word as a row
+                    data.forEach(word => {
+                        const row = document.createElement('tr');
+                        row.id = `word-${word.id}`;
+                        row.innerHTML = `
+                            <td>${word.id}</td>
+                            <td>${word.original_word}</td>
+                            <td>${word.translation}</td>
+                            <td>${word.example || ''}</td>
+                            <td>${word.notes || ''}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary btn-action" onclick="editWord(${word.id}, '${word.original_word}', '${word.translation}', '${word.example || ''}', '${word.notes || ''}')">Edit</button>
+                                <button class="btn btn-sm btn-outline-danger btn-action" 
+                                        hx-delete="/api/words/${word.id}" 
+                                        hx-confirm="Are you sure you want to delete this word?" 
+                                        hx-target="#word-${word.id}" 
+                                        hx-swap="outerHTML"
+                                        hx-on::after-request="showAlert('Word deleted successfully!', 'warning');">
+                                    Delete
+                                </button>
+                            </td>
+                        `;
+                        event.detail.target.appendChild(row);
+                    });
+                } catch (error) {
+                    console.error('Error parsing words data:', error);
+                    event.detail.target.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error loading words. Please try again.</td></tr>';
+                }
+            }
+        });
+
+        // Function to create and show alerts
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show`;
+            alert.role = 'alert';
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            alertContainer.appendChild(alert);
+            
+            // Auto dismiss after 3 seconds
+            setTimeout(() => {
+                alert.classList.remove('show');
+                setTimeout(() => alert.remove(), 150);
+            }, 3000);
+        }
+
+        // Function to open edit form
+        function editWord(id, originalWord, translation, example, notes) {
+            // Get the word row
+            const wordRow = document.getElementById(`word-${id}`);
+            
+            // Get the edit form template and replace placeholders
+            let editFormHTML = document.getElementById('edit-form-template').innerHTML;
+            editFormHTML = editFormHTML.replace(/{id}/g, id)
+                                      .replace(/{original_word}/g, originalWord)
+                                      .replace(/{translation}/g, translation)
+                                      .replace(/{example}/g, example)
+                                      .replace(/{notes}/g, notes);
+            
+            // Insert the form after the word row
+            wordRow.insertAdjacentHTML('afterend', editFormHTML);
+            
+            // Show the form
+            wordRow.nextElementSibling.style.display = 'table-row';
+            
+            // Hide the word row
+            wordRow.style.display = 'none';
+        }
+
+        // Function to cancel edit
+        function cancelEdit(button) {
+            const formRow = button.closest('tr');
+            const wordRow = formRow.previousElementSibling;
+            
+            // Show the word row
+            wordRow.style.display = 'table-row';
+            
+            // Remove the form row
+            formRow.remove();
+        }
+
+        // Add event listener for form submission errors
+        document.addEventListener('htmx:responseError', function(event) {
+            let errorMessage = 'An error occurred';
+            try {
+                const response = JSON.parse(event.detail.xhr.responseText);
+                errorMessage = response.message || errorMessage;
+            } catch (e) {
+                errorMessage = event.detail.xhr.responseText || errorMessage;
+            }
+            showAlert(errorMessage, 'danger');
+        });
+    </script>
+</body>
+</html>
+
